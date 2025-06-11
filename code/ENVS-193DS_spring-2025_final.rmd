@@ -14,6 +14,8 @@ library(lubridate) # easy date handling
 library(tibble)    # just for nice printing
 library(janitor)
 library(DHARMa)
+library(MuMIn)
+library(ggeffects) 
 ```
 
 ```{r Problem 1, include=FALSE}
@@ -88,7 +90,7 @@ nest_boxes <- read.csv("data/occdist.csv") |>
   )
 
 
-# lookup table for the four candidate models
+# d) lookup table for the four candidate models
 model_table <- tribble(
   ~model_number, ~season, ~distance_to_forest_edge, ~model_description,
   1,             "",      "",                       "Null model: no predictors",
@@ -97,44 +99,64 @@ model_table <- tribble(
   4,             "",      "X",                      "Distance-to-forest-edge-only model"
 )
 
-model1 <- lm(cs ~ 1, data = nest_boxes)  
-# null
-model2 <- lm(cs ~ season + distance_to_forest_edge,data = nest_boxes)     # saturated
-model3 <- lm(cs ~ season, data = nest_boxes)
-#season only
-model4 <- lm(cs ~ distance_to_forest_edge,data = nest_boxes)  
-# distance only
+library(DHARMa)
 
+#e)  1.  Simulate residuals
+model_1_res <- simulateResiduals(model1, n = 1000)
+model_2_res <- simulateResiduals(model2, n = 1000)
+model_3_res <- simulateResiduals(model3, n = 1000)
+model_4_res <- simulateResiduals(model4, n = 1000)
 
+# Save current graphics settings, then set up a 4×4 layout 
+old_par <- par(no.readonly = TRUE)           # store user’s defaults
+par(mfrow = c(4, 4),                         # 4 rows × 4 columns
+    mar   = c(3.2, 3.2, 1.5, 0.8),           # smaller margins
+    cex   = 0.55, cex.axis = 0.55,           # shrink all text/symbols
+    cex.lab = 0.55, cex.main = 0.55)
 
-# Null Model
-sim_res1 <- simulateResiduals(fittedModel = model1, n = 1000)
-plot(sim_res1, main = "DHARMa diagnostics – model1 (null)")
-# Optional formal tests
-# testUniformity(sim_res1)
-# testDispersion(sim_res1)
-# testZeroInflation(sim_res1)
+# f) Plot diagnostics 
 
-# Saturated Model 
-sim_res2 <- simulateResiduals(fittedModel = model2, n = 1000)
-plot(sim_res2, main = "DHARMa diagnostics – model2 (saturated)")
-# testUniformity(sim_res2)
-# testDispersion(sim_res2)
-# testZeroInflation(sim_res2)
+# —— Model 1 ————————————————————————————————————————————————
+plot(model_1_res,
+     main = "Model 1",                      
+     testUniform = FALSE, testDispersion = FALSE,
+     testOutliers = FALSE, quantreg = FALSE)
 
-# Season Only Model
-sim_res3 <- simulateResiduals(fittedModel = model3, n = 1000)
-plot(sim_res3, main = "DHARMa diagnostics – model3 (season only)")
-# testUniformity(sim_res3)
-# testDispersion(sim_res3)
-# testZeroInflation(sim_res3)
+# —— Model 2 ————————————————————————————————————————————————
+plot(model_2_res,
+     main = "Model 2",
+     testUniform = FALSE, testDispersion = FALSE,
+     testOutliers = FALSE, quantreg = FALSE)
 
-# Distance Only Model 
-sim_res4 <- simulateResiduals(fittedModel = model4, n = 1000)
-plot(sim_res4, main = "DHARMa diagnostics – model4 (distance only)")
-# testUniformity(sim_res4)
-# testDispersion(sim_res4)
-# testZeroInflation(sim_res4)
+# —— Model 3 ————————————————————————————————————————————————
+plot(model_3_res,
+     main = "Model 3",
+     testUniform = FALSE, testDispersion = FALSE,
+     testOutliers = FALSE, quantreg = FALSE)
+
+# —— Model 4 ————————————————————————————————————————————————
+plot(model_4_res,
+     main = "Model 4",
+     testUniform = FALSE, testDispersion = FALSE,
+     testOutliers = FALSE, quantreg = FALSE)
+
+#  Restore original graphics settings 
+par(old_par)
+
+#g) Selecting the best model
+
+AICc(model1, model2, model3, model4) |>
+  arrange(AICc)
+
+#The best model, as determined by Akaike's Information Criterion is the model that predicts parrot occupance from both season and distance to forest edge. The high performance of this model indicates that combining season and proximity to forest edge is the best indicator of nest occupancy compared to combinations of other predictors.
+
+#h) Visualizing model predictions
+
+pred <- ggpredict(
+  model2,
+  terms = c("distance")
+)
+
 ```
 
 a) The presence of a 1 means the target species occupied the nest box while the presence of a 0 indicates there is no species/ a different species that is occupying the nest box. The 'e' column 1 and 0's indicate whether or not it is occupied, regardless of species type. 
