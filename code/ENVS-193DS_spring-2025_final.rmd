@@ -12,7 +12,8 @@ library(tidyverse)
 library(dplyr)     # data wrangling verbs
 library(lubridate) # easy date handling
 library(tibble)    # just for nice printing
-
+library(janitor)
+library(DHARMa)
 ```
 
 ```{r Problem 1, include=FALSE}
@@ -77,3 +78,67 @@ sst_clean %>%
   )
 ```
 
+```{r Problem 3}
+nest_boxes <- read.csv("data/occdist.csv") |>
+  clean_names() |>                                   
+  rename(distance_to_forest_edge = edge_distance) |> # nicer variable name
+  mutate(
+    season = factor(season),                         # treat season as factor
+    cs     = as.numeric(cs)                          # 0 / 1 common-starling use
+  )
+
+
+# lookup table for the four candidate models
+model_table <- tribble(
+  ~model_number, ~season, ~distance_to_forest_edge, ~model_description,
+  1,             "",      "",                       "Null model: no predictors",
+  2,             "X",     "X",                      "Saturated model: all predictors",
+  3,             "X",     "",                       "Season-only model",
+  4,             "",      "X",                      "Distance-to-forest-edge-only model"
+)
+
+model1 <- lm(cs ~ 1, data = nest_boxes)  
+# null
+model2 <- lm(cs ~ season + distance_to_forest_edge,data = nest_boxes)     # saturated
+model3 <- lm(cs ~ season, data = nest_boxes)
+#season only
+model4 <- lm(cs ~ distance_to_forest_edge,data = nest_boxes)  
+# distance only
+
+
+
+# Null Model
+sim_res1 <- simulateResiduals(fittedModel = model1, n = 1000)
+plot(sim_res1, main = "DHARMa diagnostics – model1 (null)")
+# Optional formal tests
+# testUniformity(sim_res1)
+# testDispersion(sim_res1)
+# testZeroInflation(sim_res1)
+
+# Saturated Model 
+sim_res2 <- simulateResiduals(fittedModel = model2, n = 1000)
+plot(sim_res2, main = "DHARMa diagnostics – model2 (saturated)")
+# testUniformity(sim_res2)
+# testDispersion(sim_res2)
+# testZeroInflation(sim_res2)
+
+# Season Only Model
+sim_res3 <- simulateResiduals(fittedModel = model3, n = 1000)
+plot(sim_res3, main = "DHARMa diagnostics – model3 (season only)")
+# testUniformity(sim_res3)
+# testDispersion(sim_res3)
+# testZeroInflation(sim_res3)
+
+# Distance Only Model 
+sim_res4 <- simulateResiduals(fittedModel = model4, n = 1000)
+plot(sim_res4, main = "DHARMa diagnostics – model4 (distance only)")
+# testUniformity(sim_res4)
+# testDispersion(sim_res4)
+# testZeroInflation(sim_res4)
+```
+
+a) The presence of a 1 means the target species occupied the nest box while the presence of a 0 indicates there is no species/ a different species that is occupying the nest box. The 'e' column 1 and 0's indicate whether or not it is occupied, regardless of species type. 
+
+b) The main difference between Swift Parrots and Common Starlings and Tree martins are Swift Parrots are critically endangered due to deforestation and the introduction of a new predator while the Starlings and Martins are abundant, native species that exploit nest boxes intended for Swift Parrot species preservation. 
+
+c) The two summer breeding seasons of 2016 and 2019 represent the years where parrots were present at the site. Parrots were not present in between these years. The 2019 nesting boxes allowed the researchers to test a more effective management option, permanent boxes, compared to the 2016 breeding site. 
