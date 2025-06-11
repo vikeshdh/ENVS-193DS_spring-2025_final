@@ -5,7 +5,75 @@ date: "2025-06-10"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+https://github.com/vikeshdh/ENVS-193DS_spring-2025_final/tree/main
+
+```{r Setup, include=FALSE}
+library(tidyverse)
+library(dplyr)     # data wrangling verbs
+library(lubridate) # easy date handling
+library(tibble)    # just for nice printing
+
+```
+
+```{r Problem 1, include=FALSE}
+
+```
+
+a) In part 1, my coworker used a Spearman rank correlation, evidenced by Spearmens $\rho$ being greater than 0. This signifies that if nitrogen runoff and distance to headwaters were completely unrelated, we would only see the rho 3% of the time. In Part 2, they did a one-way ANOVA, comparing the mean nitrogen loads across five sources. The $/rho$ =0.02 tells me that the difference in means is significant. 
+
+b) The coworker could have listed the effect size. This would tell the reader how much of the variation is explained by the individual source, like if fertilizer had a greater effect size than grasslands, for example. One additional test they could have done is a linear mixed effects model where the source (urban deposition, fertilizer, etc) is the fixed effect and the site and year are the random intercepts. This tells us whether sources are explained by differences in site or differences in year, which isn't accounted for in the ANOVA. 
+
+c) As distance from headwaters (km) increased, there is evidence to suggest that total nitrogen load (kg year^-1) also increased ($/rho$ = correlation coefficient, n = sample size, p = 0.03, $\alpha$ = signficance level). The average nitrogen load differed between the five source categories (urban land, atmospheric deposition, fertilizer, wastewater treatment, and grasslands) with one source of nitrogen contributing more than the others (one-way ANOVA, df  = degrees of freedom, F = f-ratio, MSB = mean square, p = 0.02, $\alpha$ = 0.05)
+
+```{r Problem 2, include=FALSE}
+sst <- read.csv("data/SST_update2023.csv") # read in original SST file
+
+sst_clean <- sst %>%                       # start with the raw data 
+  
+  # Add explicit year & month columns
+  mutate(
+    year  = year(date),                    # extract year from a date column
+    month = month(date, label = TRUE,      # extract month
+                  abbr  = TRUE)
+  ) %>% 
+  # Average within each year-month cell
+  group_by(year, month) %>% 
+  summarise(mean_monthly_sst = mean(temp, na.rm = TRUE),
+            .groups = "drop") %>% 
+  # 3. Polish data types
+  mutate(
+    year  = factor(year),                  # keep years as factors for plotting
+    month = factor(month,
+                   levels = month.abb,     # ensure Jan–Dec order
+                   ordered = TRUE)
+  )
+
+ # Peek at a random five-row subset
+sst_clean %>% 
+  slice_sample(n = 5)
+
+ # Show the data structure
+str(sst_clean)
+
+library(ggplot2)
+library(viridis)   # for a colour-blind-friendly palette
+
+sst_clean %>% 
+  filter(year %in% 2018:2023) %>% 
+  mutate(year = factor(year, levels = 2018:2023)) %>% 
+  ggplot(aes(month, mean_monthly_sst,
+             group = year, colour = year)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  scale_colour_brewer(palette = "Blues", direction = 1, name = "Year") +
+  labs(x = "Month",
+       y = "Mean monthly sea surface temperature (°C)") +
+  theme_classic(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position   = c(0.08, 0.88),          # inside plot, upper-left
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.key        = element_rect(fill = NA)
+  )
 ```
 
