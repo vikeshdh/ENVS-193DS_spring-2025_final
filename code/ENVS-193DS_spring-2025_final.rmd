@@ -3,6 +3,7 @@ title: "ENVS-193DS_spring-2025_final"
 author: "Vikesh Dheeriya"
 date: "2025-06-10"
 output: html_document
+toc: true         
 ---
 
 https://github.com/vikeshdh/ENVS-193DS_spring-2025_final/tree/main
@@ -20,6 +21,7 @@ library(ggeffects)
 library(knitr)
 
 knitr::opts_knit$set(root.dir = here::here())
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 
 ```
 
@@ -31,7 +33,7 @@ b) The coworker could have listed the effect size. This would tell the reader ho
 
 c) As distance from headwaters (km) increased, there is evidence to suggest that total nitrogen load (kg year^-1) also increased ($/rho$ = correlation coefficient, n = sample size, p = 0.03, $\alpha$ = signficance level). The average nitrogen load differed between the five source categories (urban land, atmospheric deposition, fertilizer, wastewater treatment, and grasslands) with one source of nitrogen contributing more than the others (one-way ANOVA, df  = degrees of freedom, F = f-ratio, MSB = mean square, p = 0.02, $\alpha$ = 0.05)
 
-```{r Problem 2, include=FALSE}
+```{r Problem 2}
 
 sst <- read.csv("data/SST_update2023.csv") # read in original file
 
@@ -106,14 +108,14 @@ model_table <- tribble(
   4,             "",      "X",                      "Distance-to-forest-edge-only model" 
 ) # labels table with model names and number
 
-#e)
+#e) Generates linear models for each predictor
 
 model1 <- lm(sp ~ 1, data = nest_boxes)  # null
 model2 <- lm(sp ~ season + distance_to_forest_edge, data = nest_boxes)  # saturated
 model3 <- lm(sp ~ season,data = nest_boxes)  # season only
 model4 <- lm(sp ~ distance_to_forest_edge, data = nest_boxes)  # distance only
 
-#e)  1.  Simulate residuals
+#f) Simulate residuals
 model_1_res <- simulateResiduals(model1, n = 1000)
 model_2_res <- simulateResiduals(model2, n = 1000)
 model_3_res <- simulateResiduals(model3, n = 1000)
@@ -206,10 +208,12 @@ ggplot(parrot_predictions, #lists axis names
   theme_classic(base_size = 11) +
   theme(panel.grid = element_blank())
 ```
+
 Figure 1. Predicted Swift Parrot nest-box occupancy by distance to forest edge. Showing both 2016 and 2019 seasons, the lines show the linear model-predicted probability of nest box occupancy. The shaded areas are 95% confidence intervals. The points are reaw observations of occupancy where 0 = empty and 1 = occupied.
 Data: Stojanovic, Dejan et al. (2021). Do nest boxes breed the target species or its competitors? A case study of a critically endangered bird [Dataset]. Dryad. https://doi.org/10.5061/dryad.83bk3j9sb
 
 ```{r Model Predictions and Analysis}
+
 #j) Model Prediction Calculations
 
 edge_preds <- ggpredict( # calcualates linear model predictions
