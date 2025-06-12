@@ -18,11 +18,12 @@ library(DHARMa)
 library(MuMIn)
 library(ggeffects)
 library(knitr)
+
+knitr::opts_knit$set(root.dir = here::here())
+
 ```
 
-```{r Problem 1, include=FALSE}
-
-```
+Problem 1
 
 a) In part 1, my coworker used a Spearman rank correlation, evidenced by Spearmens $\rho$ being greater than 0. This signifies that if nitrogen runoff and distance to headwaters were completely unrelated, we would only see the rho 3% of the time. In Part 2, they did a one-way ANOVA, comparing the mean nitrogen loads across five sources. The $/rho$ =0.02 tells me that the difference in means is significant. 
 
@@ -31,10 +32,10 @@ b) The coworker could have listed the effect size. This would tell the reader ho
 c) As distance from headwaters (km) increased, there is evidence to suggest that total nitrogen load (kg year^-1) also increased ($/rho$ = correlation coefficient, n = sample size, p = 0.03, $\alpha$ = signficance level). The average nitrogen load differed between the five source categories (urban land, atmospheric deposition, fertilizer, wastewater treatment, and grasslands) with one source of nitrogen contributing more than the others (one-way ANOVA, df  = degrees of freedom, F = f-ratio, MSB = mean square, p = 0.02, $\alpha$ = 0.05)
 
 ```{r Problem 2, include=FALSE}
-sst <- read.csv("data/SST_update2023.csv") # read in original SST file
+
+sst <- read.csv("data/SST_update2023.csv") # read in original file
 
 sst_clean <- sst %>%                       # start with the raw data 
-  
   # Add explicit year & month columns
   mutate(
     year  = year(date),                    # extract year from a date column
@@ -45,38 +46,34 @@ sst_clean <- sst %>%                       # start with the raw data
   group_by(year, month) %>% 
   summarise(mean_monthly_sst = mean(temp, na.rm = TRUE),
             .groups = "drop") %>% 
-  # 3. Polish data types
   mutate(
-    year  = factor(year),                  # keep years as factors for plotting
+    year  = factor(year),                  # keep years
     month = factor(month,
                    levels = month.abb,     # ensure Jan–Dec order
                    ordered = TRUE)
   )
 
- # Peek at a random five-row subset
+ # look at random five-row subset
 sst_clean %>% 
   slice_sample(n = 5)
 
- # Show the data structure
+ # show data structure
 str(sst_clean)
 
-library(ggplot2)
-library(viridis)   # for a colour-blind-friendly palette
-
 sst_clean %>% 
-  filter(year %in% 2018:2023) %>% 
+  filter(year %in% 2018:2023) %>% #filters from 2018 to 2023
   mutate(year = factor(year, levels = 2018:2023)) %>% 
   ggplot(aes(month, mean_monthly_sst,
              group = year, colour = year)) +
   geom_line(size = 1) +
   geom_point(size = 2) +
-  scale_colour_brewer(palette = "Blues", direction = 1, name = "Year") +
+  scale_colour_brewer(palette = "Blues", direction = 1, name = "Year") + #adds blue color scheme
   labs(x = "Month",
        y = "Mean monthly sea surface temperature (°C)") +
   theme_classic(base_size = 13) +
   theme(
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position   = c(0.08, 0.88),          # inside plot, upper-left
+    legend.position   = c(0.08, 0.88),          # puts legend inside plot
     legend.background = element_rect(fill = "white", colour = NA),
     legend.key        = element_rect(fill = NA)
   )
@@ -93,10 +90,10 @@ c) The two summer breeding seasons of 2016 and 2019 represent the years where pa
 ```{r Problem 3}
 nest_boxes <- read.csv("data/occdist.csv") |>
   clean_names() |>                                   
-  rename(distance_to_forest_edge = edge_distance) |> # nicer variable name
+  rename(distance_to_forest_edge = edge_distance) |> # descriptive variable name
   mutate(
     season = factor(season),                         # treat season as factor
-    cs     = as.numeric(cs)                          # 0 / 1 common-starling use
+    sp     = as.numeric(sp)                          # 0 / 1 occupancy
   )
 
 
@@ -106,10 +103,15 @@ model_table <- tribble(
   1,             "",      "",                       "Null model: no predictors",
   2,             "X",     "X",                      "Saturated model: all predictors",
   3,             "X",     "",                       "Season-only model",
-  4,             "",      "X",                      "Distance-to-forest-edge-only model"
-)
+  4,             "",      "X",                      "Distance-to-forest-edge-only model" 
+) # labels table with model names and number
 
-library(DHARMa)
+#e)
+
+model1 <- lm(sp ~ 1, data = nest_boxes)  # null
+model2 <- lm(sp ~ season + distance_to_forest_edge, data = nest_boxes)  # saturated
+model3 <- lm(sp ~ season,data = nest_boxes)  # season only
+model4 <- lm(sp ~ distance_to_forest_edge, data = nest_boxes)  # distance only
 
 #e)  1.  Simulate residuals
 model_1_res <- simulateResiduals(model1, n = 1000)
@@ -126,25 +128,25 @@ par(mfrow = c(4, 4),                         # 4 rows × 4 columns
 
 # f) Plot diagnostics 
 
-# —— Model 1 ————————————————————————————————————————————————
+# Model 1
 plot(model_1_res,
      main = "Model 1",                      
-     testUniform = FALSE, testDispersion = FALSE,
+     testUniform = FALSE, testDispersion = FALSE,#removes unneccesary next from plot
      testOutliers = FALSE, quantreg = FALSE)
 
-# —— Model 2 ————————————————————————————————————————————————
+# Model 2
 plot(model_2_res,
      main = "Model 2",
      testUniform = FALSE, testDispersion = FALSE,
      testOutliers = FALSE, quantreg = FALSE)
 
-# —— Model 3 ————————————————————————————————————————————————
+# Model 3
 plot(model_3_res,
      main = "Model 3",
      testUniform = FALSE, testDispersion = FALSE,
      testOutliers = FALSE, quantreg = FALSE)
 
-# —— Model 4 ————————————————————————————————————————————————
+# Model 4
 plot(model_4_res,
      main = "Model 4",
      testUniform = FALSE, testDispersion = FALSE,
@@ -155,7 +157,7 @@ par(old_par)
 
 #g) Selecting the best model
 
-AICc(model1, model2, model3, model4) |>
+AICc(model1, model2, model3, model4) |> # performs AIC analysis on models
   arrange(AICc)
 
 #The best model, as determined by Akaike's Information Criterion is the model that predicts parrot occupance from both season and distance to forest edge. The high performance of this model indicates that combining season and proximity to forest edge is the best indicator of nest occupancy compared to combinations of other predictors.
@@ -164,20 +166,20 @@ AICc(model1, model2, model3, model4) |>
 
 # 1. Predictions across the distance range, for every season (Model 2)
 parrot_predictions <- ggpredict(
- model2,                                # fitted binomial model
-  terms = c("distance_to_forest_edge",   # let ggpredict pick sensible x-grid
-            "season")                           # keep each season level
+ model2,                                
+  terms = c("distance_to_forest_edge",   # gives name to terms for ggpredict
+            "season")                           # keep each season
 ) |>
   as_tibble() |>
   rename(
-    distance_to_forest_edge = x,       # match raw-data column
+    distance_to_forest_edge = x,       # match raw data column
     season      = group,               # clearer name than "group"
     prob_hat    = predicted,           # keep column names identical in style
     lo95        = conf.low,
     hi95        = conf.high
   )
 
-#h) Plot includes raw points model lines + 95 % CI ribbons 
+#h) Plot includes raw points model lines + 95 % CI shaded areas
 ggplot(parrot_predictions, #lists axis names
        aes(x = distance_to_forest_edge,
            y = prob_hat,
@@ -190,7 +192,7 @@ ggplot(parrot_predictions, #lists axis names
   geom_line(size = 1) +
   # 0/1 occupancy data
   geom_jitter(data = nest_boxes,
-              aes(y = cs),
+              aes(y = sp),
               height = 0.04, width = 0,
               shape = 21, colour = "grey40", alpha = 0.35) +
   # non-default colours
@@ -210,11 +212,11 @@ Data: Stojanovic, Dejan et al. (2021). Do nest boxes breed the target species or
 ```{r Model Predictions and Analysis}
 #j) Model Prediction Calculations
 
-edge_preds <- ggpredict(
+edge_preds <- ggpredict( # calcualates linear model predictions
 model2,
-  terms = c("distance_to_forest_edge [0,900]", "season")
+  terms = c("distance_to_forest_edge [0,900]", "season") #sets edges to 0 and 900 meters from forest edge
 ) |>
-  as_tibble() |>
+  as_tibble() |> # creates basic table
   rename(
     distance_to_forest_edge = x,
     season      = group,
@@ -223,7 +225,7 @@ model2,
     hi95        = conf.high
   )
 
-edge_preds |>
+edge_preds |> # creates deliverable table
   mutate(across(where(is.numeric), ~ round(.x, 3))) |>
   kable(
     caption = "Table 1. Predicted Swift Parrot nest box occupancy probabilities  at 0 m and 900 m from the forest edge for each season.",
@@ -236,7 +238,7 @@ edge_preds |>
   )
 ```
 
-k) Figure 1 shows that Swift Parrot nest box occupancy is highly dependent on proximity to forest edge (0m). The model predicts approximately a 77% occupancy in the 2019 season and 38% occupancy in the 2016 season (see Table 1). At 900 meters away from the forest edge, the probability of occupance decline to 16% and 9%, respectively. The negative slope present in both seasons in Figure 1 indicates a decline in occupancy with an increase in distance from forest edge. This can be explained by the Swift Parrot's diet which may consist of blue gum Eucalyptus trees along forest edges. The further from the forest the parrots travel, the more they lose protection from tree cover and food sources. The reverse happens for Tree Martins, who prefer nest boxes further from the forest edge (Stojanovic et al. 2021, Figure 1).
+k) Figure 1 shows that Swift Parrot nest box occupancy is highly dependent on proximity to forest edge (0m). The model predicts approximately a 43% occupancy in the 2019 season and 30% occupancy in the 2016 season (see Table 1). At 900 meters away from the forest edge, the probability of occupance decline to 14% and 1%, respectively. The negative slope present in both seasons in Figure 1 indicates a decline in occupancy with an increase in distance from forest edge. This can be explained by the Swift Parrot's diet which may consist of blue gum Eucalyptus trees along forest edges. The further from the forest the parrots travel, the more they lose protection from tree cover and food sources. The reverse happens for Tree Martins, who prefer nest boxes further from the forest edge (Stojanovic et al. 2021, Figure 1).
 
 Problem 4
 
