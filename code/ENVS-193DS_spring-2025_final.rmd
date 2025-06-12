@@ -8,10 +8,11 @@ output: html_document
 https://github.com/vikeshdh/ENVS-193DS_spring-2025_final/tree/main
 
 ```{r Setup, include=FALSE}
+
 library(tidyverse)
-library(dplyr)     # data wrangling verbs
-library(lubridate) # easy date handling
-library(tibble)    # just for nice printing
+library(dplyr)     # Added 
+library(lubridate) 
+library(tibble)    
 library(janitor)
 library(DHARMa)
 library(MuMIn)
