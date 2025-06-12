@@ -15,7 +15,8 @@ library(tibble)    # just for nice printing
 library(janitor)
 library(DHARMa)
 library(MuMIn)
-library(ggeffects) 
+library(ggeffects)
+library(knitr)
 ```
 
 ```{r Problem 1, include=FALSE}
@@ -79,6 +80,14 @@ sst_clean %>%
     legend.key        = element_rect(fill = NA)
   )
 ```
+
+Problem 3
+
+a) The presence of a 1 means the target species occupied the nest box while the presence of a 0 indicates there is no species/ a different species that is occupying the nest box. The 'e' column 1 and 0's indicate whether or not it is occupied, regardless of species type. 
+
+b) The main difference between Swift Parrots and Common Starlings and Tree martins are Swift Parrots are critically endangered due to deforestation and the introduction of a new predator while the Starlings and Martins are abundant, native species that exploit nest boxes intended for Swift Parrot species preservation. 
+
+c) The two summer breeding seasons of 2016 and 2019 represent the years where parrots were present at the site. Parrots were not present in between these years. The 2019 nesting boxes allowed the researchers to test a more effective management option, permanent boxes, compared to the 2016 breeding site. 
 
 ```{r Problem 3}
 nest_boxes <- read.csv("data/occdist.csv") |>
@@ -152,15 +161,83 @@ AICc(model1, model2, model3, model4) |>
 
 #h) Visualizing model predictions
 
-pred <- ggpredict(
-  model2,
-  terms = c("distance")
-)
+# 1. Predictions across the distance range, for every season (Model 2)
+parrot_predictions <- ggpredict(
+ model2,                                # fitted binomial model
+  terms = c("distance_to_forest_edge",   # let ggpredict pick sensible x-grid
+            "season")                           # keep each season level
+) |>
+  as_tibble() |>
+  rename(
+    distance_to_forest_edge = x,       # match raw-data column
+    season      = group,               # clearer name than "group"
+    prob_hat    = predicted,           # keep column names identical in style
+    lo95        = conf.low,
+    hi95        = conf.high
+  )
 
+#h) Plot includes raw points model lines + 95 % CI ribbons 
+ggplot(parrot_predictions, #lists axis names
+       aes(x = distance_to_forest_edge,
+           y = prob_hat,
+           colour = season,
+           fill   = season)) +
+  # confidence band
+  geom_ribbon(aes(ymin = lo95, ymax = hi95),
+              alpha = 0.18, colour = NA) +
+  # prediction line
+  geom_line(size = 1) +
+  # 0/1 occupancy data
+  geom_jitter(data = nest_boxes,
+              aes(y = cs),
+              height = 0.04, width = 0,
+              shape = 21, colour = "grey40", alpha = 0.35) +
+  # non-default colours
+  scale_colour_brewer(palette = "Set2", name = "Season") +
+  scale_fill_brewer(palette = "Set2", guide  = "none") +
+  #axis labels
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Distance to forest edge (m)",
+       y = "Predicted probability of nestbox occupancy") +
+  # minimal theme
+  theme_classic(base_size = 11) +
+  theme(panel.grid = element_blank())
+```
+Figure 1. Predicted Swift Parrot nest-box occupancy by distance to forest edge. Showing both 2016 and 2019 seasons, the lines show the linear model-predicted probability of nest box occupancy. The shaded areas are 95% confidence intervals. The points are reaw observations of occupancy where 0 = empty and 1 = occupied.
+Data: Stojanovic, Dejan et al. (2021). Do nest boxes breed the target species or its competitors? A case study of a critically endangered bird [Dataset]. Dryad. https://doi.org/10.5061/dryad.83bk3j9sb
+
+```{r Model Predictions and Analysis}
+#j) Model Prediction Calculations
+
+edge_preds <- ggpredict(
+model2,
+  terms = c("distance_to_forest_edge [0,900]", "season")
+) |>
+  as_tibble() |>
+  rename(
+    distance_to_forest_edge = x,
+    season      = group,
+    prob_hat    = predicted,
+    lo95        = conf.low,
+    hi95        = conf.high
+  )
+
+edge_preds |>
+  mutate(across(where(is.numeric), ~ round(.x, 3))) |>
+  kable(
+    caption = "Table 1. Predicted Swift Parrot nest box occupancy probabilities  at 0 m and 900 m from the forest edge for each season.",
+    col.names = c("Distance to edge (m)",
+                  "Season",
+                  "Predicted p",
+                  "Lower 95 % CI",
+                  "Standard Error",
+                  "Upper 95 % CI")
+  )
 ```
 
-a) The presence of a 1 means the target species occupied the nest box while the presence of a 0 indicates there is no species/ a different species that is occupying the nest box. The 'e' column 1 and 0's indicate whether or not it is occupied, regardless of species type. 
+k) Figure 1 shows that Swift Parrot nest box occupancy is highly dependent on proximity to forest edge (0m). The model predicts approximately a 77% occupancy in the 2019 season and 38% occupancy in the 2016 season (see Table 1). At 900 meters away from the forest edge, the probability of occupance decline to 16% and 9%, respectively. The negative slope present in both seasons in Figure 1 indicates a decline in occupancy with an increase in distance from forest edge. This can be explained by the Swift Parrot's diet which may consist of blue gum Eucalyptus trees along forest edges. The further from the forest the parrots travel, the more they lose protection from tree cover and food sources. The reverse happens for Tree Martins, who prefer nest boxes further from the forest edge (Stojanovic et al. 2021, Figure 1).
 
-b) The main difference between Swift Parrots and Common Starlings and Tree martins are Swift Parrots are critically endangered due to deforestation and the introduction of a new predator while the Starlings and Martins are abundant, native species that exploit nest boxes intended for Swift Parrot species preservation. 
+Problem 4
 
-c) The two summer breeding seasons of 2016 and 2019 represent the years where parrots were present at the site. Parrots were not present in between these years. The 2019 nesting boxes allowed the researchers to test a more effective management option, permanent boxes, compared to the 2016 breeding site. 
+The visualizations are different from each other in the portrayal of soreness and color scheme. I didn't initially think it was important to show soreness but I realized it adds another layer of emotion to the data. In both, I had a graph format with time on the x axis. I kept the linear format of jump vs time in both visualizations because I think its neccesary to tell a story. Evaluating trends over time is a crucial aspect of relatability for the reader as they see growth and decline. I got feedback on over complicating the visualization. I incorporated these changes by simplifying the color scheme to make it easier to understand quickly for the reader. 
+
